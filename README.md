@@ -6,7 +6,6 @@
 
 Do not make any direct changes to the **dev** or **main** branchs
 
-
 Create a branch off of **dev** ```git checkout -b username-feature```
 
 Push your new branch to the github: ```git push -u origin username-feature```
