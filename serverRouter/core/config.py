@@ -1,8 +1,22 @@
 """Shared configuration constants for the OmniLLM API."""
+import json
+import os
+
 import firebase_admin
+from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
 
-cred = credentials.Certificate('firebase-credentials.json')
+load_dotenv()
+
+_FIREBASE_CREDENTIALS_JSON = os.getenv("FIREBASE_CREDENTIALS_JSON")
+if not _FIREBASE_CREDENTIALS_JSON:
+    raise RuntimeError(
+        "FIREBASE_CREDENTIALS_JSON is not set. Put the full Firebase service-account "
+        "JSON (as a single-line string) in your .env file or secrets manager — see "
+        ".env.example. Never write it to a file in the repo."
+    )
+
+cred = credentials.Certificate(json.loads(_FIREBASE_CREDENTIALS_JSON))
 app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 VALID_API_KEYS = set()

@@ -7,6 +7,16 @@ __pycache__/
 *.log
 .vercel
 templates/
+
+# Credentials — never commit these
+firebase-credentials.json
+*firebase-credentials*.json
+*serviceAccount*.json
+*service-account*.json
+*credentials*.json
+*.pem
+*.key
+prodenv.yml
 test_sd_server.py 
 test_together_server.py
 serverRouter/providers/stablediffusion/sample.py
