@@ -22,13 +22,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Active providers များကို သိမ်းဆည်းရန် Dictionary ကြေညာခြင်း
+active_providers = {}
+
 def initialize_providers():
     # Provider များနှင့် Class များကို List အဖြစ် သတ်မှတ်ခြင်း
     providers_list = [
         (ModelProvider.OPENAI, OpenAIProvider),
         (ModelProvider.GEMINI, GeminiProvider),
         (ModelProvider.TOGETHER, TogetherAIProvider),
-        (ModelProvider.STABILITY, StabilityProvider),
+        (ModelProvider.STABILITY, StableDiffusionProvider),  # Class name အမှန်သို့ ပြင်ထားသည်
+        (ModelProvider.ANTHROPIC, AnthropicProvider),
+        (ModelProvider.DEEPSEEK, DeepSeekProvider),
     ]
 
     for provider_enum, provider_cls in providers_list:
@@ -39,9 +44,11 @@ def initialize_providers():
         except Exception as e:
             # API Key မရှိပါက App ကို မရပ်စေဘဲ Skip လုပ်သွားမည်
             print(f"[WARNING] Skipping {provider_enum} due to missing configuration: {e}")
-# # Initialize providers during startup
+
+# Initialize providers during startup
 initialize_providers()
-# # Include routers from separate files
+
+# Include routers from separate files
 app.include_router(model_routes.router)
 app.include_router(completion_routes.router)
 app.include_router(smart_routes.router)
@@ -51,8 +58,3 @@ app.include_router(reasoning_routes.router)
 @app.get("/")
 async def root():
     return {"message": "Welcome to OmniLLM!"}
-
-
-# uvicorn serverRouter.router:app --reload
-
-
