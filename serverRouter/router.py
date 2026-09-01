@@ -22,21 +22,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Function to initialize providers
 def initialize_providers():
-    global PROVIDERS
-    try:
-        PROVIDERS.update({
-            ModelProvider.OPENAI: OpenAIProvider(),
-            ModelProvider.ANTHROPIC: AnthropicProvider(),
-            ModelProvider.GEMINI: GeminiProvider(),
-            # ModelProvider.DEEPSEEK: DeepSeekProvider(), # NOT Fast Enough, using together instead
-            ModelProvider.TOGETHER: TogetherAIProvider(),
-            ModelProvider.STABLEDIFFUSION: StableDiffusionProvider()
-        })
-    except Exception as e:
-        raise
+    # Provider များနှင့် Class များကို List အဖြစ် သတ်မှတ်ခြင်း
+    providers_list = [
+        (ModelProvider.OPENAI, OpenAIProvider),
+        (ModelProvider.GEMINI, GeminiProvider),
+        (ModelProvider.TOGETHER, TogetherAIProvider),
+        (ModelProvider.STABILITY, StabilityProvider),
+    ]
 
+    for provider_enum, provider_cls in providers_list:
+        try:
+            # API Key ရှိပါက Normal Initialize လုပ်မည်
+            active_providers[provider_enum] = provider_cls()
+            print(f"[INFO] Successfully initialized {provider_enum}")
+        except Exception as e:
+            # API Key မရှိပါက App ကို မရပ်စေဘဲ Skip လုပ်သွားမည်
+            print(f"[WARNING] Skipping {provider_enum} due to missing configuration: {e}")
 # # Initialize providers during startup
 initialize_providers()
 # # Include routers from separate files
