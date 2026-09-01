@@ -1,57 +1,23 @@
-from fastapi import APIRouter, Security, Depends
-from serverRouter.routes.utils import verify_api_key
-from serverRouter.core.models import MODELS, CHAT_MODELS, IMAGE_MODELS, REASONING_MODELS
+from fastapi import FastAPI, APIRouter, Depends, HTTPException
+from serverRouter.core.datamodels import ModelProvider
+# active_providers ကို router.py သို့မဟုတ် main ထဲမှ Import လုပ်ပါ
+from serverRouter.router import active_providers
 
-router = APIRouter(prefix="/v1", tags=["models"])
+router = APIRouter(prefix="/v1/models", tags=["models"])
 
-@router.get("/models")
-async def list_models(api_key: str = Depends(verify_api_key)):
-    """List all available models"""
-    return {
-        "models": [
-            {
-                "id": model_id,
-                **model_info.model_dump()
-            }
-            for model_id, model_info in MODELS.items()
-        ]
-    }
-
-@router.get("/models/chat")
-async def list_chat_models(api_key: str = Depends(verify_api_key)):
-    """List all available chat models"""
-    return {
-        "models": [
-            {
-                "id": model_id,
-                **model_info.model_dump()
-            }
-            for model_id, model_info in CHAT_MODELS.items()
-        ]
-    }
-
-@router.get("/models/image")
-async def list_image_models(api_key: str = Depends(verify_api_key)):
-    """List all available image models"""
-    return {
-        "models": [
-            {
-                "id": model_id,
-                **model_info.model_dump()
-            }
-            for model_id, model_info in IMAGE_MODELS.items()
-        ]
-    }
-
-@router.get("/models/reasoning")
-async def list_reasoning_models(api_key: str = Depends(verify_api_key)):
-    """List all available reasoning models with extended thinking capabilities"""
-    return {
-        "models": [
-            {
-                "id": model_id,
-                **model_info.model_dump()
-            }
-            for model_id, model_info in REASONING_MODELS.items()
-        ]
-    }
+@router.get("")
+async def list_models():
+    try:
+        all_models = []
+        for provider_enum, provider_obj in active_providers.items():
+            if provider_obj and hasattr(provider_obj, "get_models"):
+                try:
+                    models = provider_obj.get_models()
+                    all_models.extend(models)
+                except Exception as e:
+                    print(f"[WARNING] Failed to fetch models from {provider_enum}: {e}")
+        
+        return {"object": "list", "data": all_models}
+    except Exception as e:
+        print(f"[ERROR] Error in list_models: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
