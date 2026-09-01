@@ -1,11 +1,10 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException
-from serverRouter.core.datamodels import ModelProvider
-# active_providers ကို router.py သို့မဟုတ် main ထဲမှ Import လုပ်ပါ
-from serverRouter.router import active_providers
+from fastapi import APIRouter, Depends, HTTPException
+from serverRouter.core.security import verify_api_key  # သင့် project ၏ API key verification dependency
+from serverRouter.core.state import active_providers
 
 router = APIRouter(prefix="/v1/models", tags=["models"])
 
-@router.get("")
+@router.get("", dependencies=[Depends(verify_api_key)])
 async def list_models():
     try:
         all_models = []
