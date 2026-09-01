@@ -22,33 +22,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Active providers များကို သိမ်းဆည်းရန် Dictionary ကြေညာခြင်း
 active_providers = {}
 
 def initialize_providers():
-    # Provider များနှင့် Class များကို List အဖြစ် သတ်မှတ်ခြင်း
+    # (Enum Name String, Class Name) အဖြစ် သတ်မှတ်ခြင်းဖြင့် Enum ရှာမတွေ့ပါက တိုက်ရိုက် Crash မဖြစ်တော့ပါ
     providers_list = [
-        (ModelProvider.OPENAI, OpenAIProvider),
-        (ModelProvider.GEMINI, GeminiProvider),
-        (ModelProvider.TOGETHER, TogetherAIProvider),
-        (ModelProvider.STABILITY, StableDiffusionProvider),  # Class name အမှန်သို့ ပြင်ထားသည်
-        (ModelProvider.ANTHROPIC, AnthropicProvider),
-        (ModelProvider.DEEPSEEK, DeepSeekProvider),
+        ("OPENAI", OpenAIProvider),
+        ("GEMINI", GeminiProvider),
+        ("TOGETHER", TogetherAIProvider),
+        ("STABILITY", StableDiffusionProvider),
+        ("STABLE_DIFFUSION", StableDiffusionProvider),  # Alt Enum Key
+        ("ANTHROPIC", AnthropicProvider),
+        ("DEEPSEEK", DeepSeekProvider),
     ]
 
-    for provider_enum, provider_cls in providers_list:
+    for enum_name, provider_cls in providers_list:
         try:
-            # API Key ရှိပါက Normal Initialize လုပ်မည်
-            active_providers[provider_enum] = provider_cls()
-            print(f"[INFO] Successfully initialized {provider_enum}")
+            # ModelProvider ထဲတွင် အဆိုပါ Enum ရှိမရှိ Safe Check လုပ်ခြင်း
+            if hasattr(ModelProvider, enum_name):
+                provider_enum = getattr(ModelProvider, enum_name)
+                
+                # ထပ်မံ initialize မလုပ်မိစေရန် စစ်ဆေးခြင်း
+                if provider_enum not in active_providers:
+                    active_providers[provider_enum] = provider_cls()
+                    print(f"[INFO] Successfully initialized {enum_name}")
         except Exception as e:
-            # API Key မရှိပါက App ကို မရပ်စေဘဲ Skip လုပ်သွားမည်
-            print(f"[WARNING] Skipping {provider_enum} due to missing configuration: {e}")
+            # Key မရှိခြင်း သို့မဟုတ် အခြား Provider Error များကို Skip လုပ်မည်
+            print(f"[WARNING] Skipping {enum_name} due to initialization error: {e}")
 
 # Initialize providers during startup
 initialize_providers()
 
-# Include routers from separate files
+# Include routers
 app.include_router(model_routes.router)
 app.include_router(completion_routes.router)
 app.include_router(smart_routes.router)
