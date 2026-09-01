@@ -1,10 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
-from serverRouter.core.security import verify_api_key  # သင့် project ၏ API key verification dependency
+from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from serverRouter.core.config import VALID_API_KEYS
 from serverRouter.core.state import active_providers
 
 router = APIRouter(prefix="/v1/models", tags=["models"])
+security = HTTPBearer()
 
-@router.get("", dependencies=[Depends(verify_api_key)])
+def verify_key(credentials: HTTPAuthorizationCredentials = Security(security)):
+    token = credentials.credentials
+    if token not in VALID_API_KEYS:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return token
+
+@router.get("", dependencies=[Depends(verify_key)])
 async def list_models():
     try:
         all_models = []
