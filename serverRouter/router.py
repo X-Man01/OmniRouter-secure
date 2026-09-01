@@ -1,16 +1,22 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from serverRouter.core.datamodels import ModelProvider
-from serverRouter.providers.anthropic.provider import AnthropicProvider
-from serverRouter.providers.openai.provider import OpenAIProvider
-from serverRouter.providers.gemini.provider import GeminiProvider
-from serverRouter.providers.deepseek.provider import DeepSeekProvider
-from serverRouter.providers.together.provider import TogetherAIProvider
-from serverRouter.providers.stablediffusion.provider import StableDiffusionProvider
-from serverRouter.routes import model_routes, completion_routes, smart_routes, reasoning_routes
 
-active_providers = {}
+from serverRouter.core.datamodels import ModelProvider
+from serverRouter.core.state import active_providers
+from serverRouter.providers.anthropic.provider import AnthropicProvider
+from serverRouter.providers.deepseek.provider import DeepSeekProvider
+from serverRouter.providers.gemini.provider import GeminiProvider
+from serverRouter.providers.openai.provider import OpenAIProvider
+from serverRouter.providers.stablediffusion.provider import StableDiffusionProvider
+from serverRouter.providers.together.provider import TogetherAIProvider
+from serverRouter.routes import (
+    completion_routes,
+    model_routes,
+    reasoning_routes,
+    smart_routes,
+)
+
 
 def initialize_providers():
     providers_list = [
@@ -33,17 +39,19 @@ def initialize_providers():
         except Exception as e:
             print(f"[WARNING] Skipping {enum_name} due to initialization error: {e}")
 
-# App စတင်ချိန်နှင့် ပိတ်ချိန် Lifespan သတ်မှတ်ခြင်း
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: App စတင်ချိန်တွင် Provider များ Init လုပ်မည်
+    # App စတင်ချိန်တွင် Provider များ Init လုပ်မည်
     initialize_providers()
     yield
-    # Shutdown: ပိတ်ချိန် လုပ်ဆောင်ချက်များ (လိုအပ်ပါက)
 
-app = FastAPI(title="OmniLLM", description="One Key, One API, Hundreds of Models", lifespan=lifespan)
+app = FastAPI(
+    title="OmniLLM",
+    description="One Key, One API, Hundreds of Models",
+    lifespan=lifespan
+)
 
-# Add CORS middleware
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -52,7 +60,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+# Router များ ချိတ်ဆက်ခြင်း
 app.include_router(model_routes.router)
 app.include_router(completion_routes.router)
 app.include_router(smart_routes.router)
