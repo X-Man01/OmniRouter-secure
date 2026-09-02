@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Literal, Union, Any, AsyncGenerator
+from typing import List, Optional, Dict, Literal, Union, Any
 from pydantic import BaseModel, Field
 from enum import Enum
 from collections.abc import Mapping
@@ -20,26 +20,45 @@ class ModelProvider(str, Enum):
 ## Chat Completion Models
 class ChatMessage(BaseModel):
     """Represents a single message in a chat conversation"""
-    role: str = Field(..., description="Role of the message sender (e.g. 'user', 'assistant', 'system')")
-    content: str = Field(..., description="Content of the message")
+    role: str = Field(..., description="Role of the message sender")
+    content: Union[str, List[Any], None] = Field(default="", description="Content of the message")
+    name: Optional[str] = None
+
+    class Config:
+        extra = "ignore"  # Multimodal သို့မဟုတ် metadata ပို့လာပါက လက်ခံရန်
 
 class ChatCompletionRequest(BaseModel):
-    """Input parameters for a chat completion request"""
+    """Input parameters for a chat completion request (OpenAI-compatible)"""
     model: str = Field(..., description="Name of the model to use")
-    messages: List[ChatMessage] = Field(..., description="List of messages in the conversation")
-    temperature: float = Field(default=1.0, ge=0.0, le=2.0, description="Sampling temperature (0-2)")
-    max_tokens: Optional[int] = Field(default=None, ge=1, description="Maximum number of tokens to generate")
-    stream: bool = Field(default=False, description="Whether to stream the response")
+    messages: List[ChatMessage] = Field(..., description="List of messages")
+    temperature: Optional[float] = Field(default=1.0)
+    max_tokens: Optional[int] = Field(default=None)
+    stream: Optional[bool] = Field(default=False)
+    top_p: Optional[float] = Field(default=1.0)
+    n: Optional[int] = Field(default=1)
+    presence_penalty: Optional[float] = Field(default=0.0)
+    frequency_penalty: Optional[float] = Field(default=0.0)
+    user: Optional[str] = None
+
+    class Config:
+        extra = "ignore"  # Android Studio Agent ၏ Extra Request Parameter များကို Auto-bypass လုပ်ရန်
 
 class ChatCompletionResponse(BaseModel):
-    """Response from a chat completion request"""
+    """Response from a chat completion request (OpenAI Specs)"""
+    id: Optional[str] = "chatcmpl-omni"
+    object: Optional[str] = "chat.completion"
+    created: Optional[int] = 1677652288
     model: str = Field(..., description="Name of the model used")
-    content: str = Field(..., description="Generated content")
-    provider: str = Field(..., description="Provider that generated the response")
+    choices: Optional[List[Any]] = None
+    content: Optional[str] = None
+    provider: Optional[str] = "omnirouter"
     usage: Dict[str, int] = Field(
         default_factory=lambda: {"total_tokens": 0},
         description="Token usage statistics"
     )
+
+    class Config:
+        extra = "ignore"
 
 ## Reasoning Models
 class ReasoningEffort(str, Enum):
@@ -50,29 +69,29 @@ class ReasoningEffort(str, Enum):
 
 class ReasoningTokenUsage(BaseModel):
     """Detailed token usage for reasoning models"""
-    input_tokens: int = Field(default=0, description="Number of input tokens used")
-    output_tokens: int = Field(default=0, description="Number of visible output tokens used")
-    reasoning_tokens: int = Field(default=0, description="Number of reasoning tokens used")
-    total_tokens: int = Field(default=0, description="Total number of tokens used")
+    input_tokens: int = Field(default=0)
+    output_tokens: int = Field(default=0)
+    reasoning_tokens: int = Field(default=0)
+    total_tokens: int = Field(default=0)
 
 class ChatReasoningRequest(BaseModel):
     """Input parameters for a reasoning chat completion request"""
     model: str = Field(..., description="Name of the model to use")
     messages: List[ChatMessage] = Field(..., description="List of messages in the conversation")
-    reasoning_effort: ReasoningEffort = Field(default=ReasoningEffort.MEDIUM, description="Level of reasoning effort (low, medium, high)")
-    max_tokens: Optional[int] = Field(default=None, ge=1, description="Maximum number of tokens to generate")
-    stream: bool = Field(default=False, description="Whether to stream the response")
-    temperature: float = Field(default=1.0, ge=0.0, le=2.0, description="Sampling temperature (0-2)")
+    reasoning_effort: ReasoningEffort = Field(default=ReasoningEffort.MEDIUM)
+    max_tokens: Optional[int] = Field(default=None)
+    stream: bool = Field(default=False)
+    temperature: float = Field(default=1.0)
+
+    class Config:
+        extra = "ignore"
 
 class ChatReasoningResponse(BaseModel):
     """Response from a reasoning chat completion request"""
-    model: str = Field(..., description="Name of the model used")
-    content: str = Field(..., description="Generated content")
-    provider: str = Field(..., description="Provider that generated the response")
-    usage: ReasoningTokenUsage = Field(
-        default_factory=lambda: ReasoningTokenUsage(),
-        description="Detailed token usage statistics including reasoning tokens"
-    )
+    model: str = Field(...)
+    content: str = Field(...)
+    provider: str = Field(...)
+    usage: ReasoningTokenUsage = Field(default_factory=ReasoningTokenUsage)
 
 ## Image Generation Models
 class ImageSize(str, Enum):
@@ -83,29 +102,32 @@ class ImageSize(str, Enum):
 
 class ImageGenerationRequest(BaseModel):
     """Input parameters for an image generation request"""
-    prompt: str = Field(..., description="Text description of the desired image")
-    model: str = Field(default="dall-e-3", description="Name of the model to use")
-    size: ImageSize = Field(default=ImageSize.LARGE, description="Size of the generated image")
-    quality: Literal["standard", "hd"] = Field(default="standard", description="Quality of the generated image")
-    n: int = Field(default=1, ge=1, le=10, description="Number of images to generate")
+    prompt: str = Field(...)
+    model: str = Field(default="dall-e-3")
+    size: ImageSize = Field(default=ImageSize.LARGE)
+    quality: Literal["standard", "hd"] = Field(default="standard")
+    n: int = Field(default=1)
+
+    class Config:
+        extra = "ignore"
 
 class ImageGenerationResponse(BaseModel):
     """Response from an image generation request"""
-    urls: List[str] = Field(..., description="URLs of the generated images")
-    model: str = Field(..., description="Name of the model used")
-    provider: str = Field(..., description="Provider that generated the images")
-
+    urls: List[str] = Field(...)
+    model: str = Field(...)
+    provider: str = Field(...)
 
 class BenchmarkScores(BaseModel, Mapping):
-    MMLU: Optional[float] = Field(None, ge=0.0, le=1.0)
-    GPQA: Optional[float] = Field(None, ge=0.0, le=1.0)
-    HumanEval: Optional[float] = Field(None, ge=0.0, le=1.0)
-    MATH: Optional[float] = Field(None, ge=0.0, le=1.0)
-    BFCL: Optional[float] = Field(None, ge=0.0, le=1.0)
-    MGSM: Optional[float] = Field(None, ge=0.0, le=1.0)
+    MMLU: Optional[float] = Field(None)
+    GPQA: Optional[float] = Field(None)
+    HumanEval: Optional[float] = Field(None)
+    MATH: Optional[float] = Field(None)
+    BFCL: Optional[float] = Field(None)
+    MGSM: Optional[float] = Field(None)
 
     class Config:
         validate_assignment = True
+        extra = "ignore"
 
     def __getitem__(self, key: str) -> Optional[float]:
         return getattr(self, key)
@@ -125,38 +147,25 @@ class BenchmarkScores(BaseModel, Mapping):
 
 class ModelInfo(BaseModel):
     """Information about a model"""
-    name: str = Field(..., description="Full name/version of the model")
-    provider: ModelProvider = Field(..., description="Provider of the model")
-    description: str = Field(..., description="Description of the model")
-    max_tokens: Optional[int] = Field(None, description="Maximum context length")
-    benchmarks: Optional[BenchmarkScores] = Field(
-        default=None,
-        description="Model benchmark scores"
-    )
-    tokenCost: Optional[float] = Field(
-        default=None,
-        description="Cost per 1000 tokens in USD"
-    )
-    latency: Optional[float] = Field(
-        default=None,
-        description="Average latency in seconds per request"
-    )
-    # Extended thinking parameters for Claude models
-    extended_thinking: Optional[bool] = Field(
-        default=False,
-        description="Whether this model supports extended thinking mode"
-    )
-    thinking_threshold: Optional[float] = Field(
-        default=0.5,
-        description="Threshold to control when the model uses extended thinking"
-    )
-    thinking_budget: Optional[int] = Field(
-        default=20000,
-        description="Token budget for extended thinking process"
-    )
+    name: str = Field(...)
+    provider: ModelProvider = Field(...)
+    description: str = Field(...)
+    max_tokens: Optional[int] = Field(None)
+    benchmarks: Optional[BenchmarkScores] = Field(default=None)
+    tokenCost: Optional[float] = Field(default=None)
+    latency: Optional[float] = Field(default=None)
+    extended_thinking: Optional[bool] = Field(default=False)
+    thinking_threshold: Optional[float] = Field(default=0.5)
+    thinking_budget: Optional[int] = Field(default=20000)
+
+    class Config:
+        extra = "ignore"
 
 class SmartRouterRequest(BaseModel):
-    messages: list[ChatMessage] = Field(..., description="List of chat messages")
-    max_latency: str = Field(..., description="Maximum latency preference (LIGHTNING, FAST, BALANCED, PERFORMANCE)")
-    max_cost: str = Field(..., description="Maximum cost preference (CHEAP, BALANCED, PREMIUM, PERFORMANCE)")
-    model_list: list = Field(..., description="List of models to consider (optional)")
+    messages: list[ChatMessage] = Field(...)
+    max_latency: str = Field(...)
+    max_cost: str = Field(...)
+    model_list: list = Field(...)
+
+    class Config:
+        extra = "ignore"
